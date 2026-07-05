@@ -22,19 +22,6 @@ function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function daysUntil(iso) {
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const target = new Date(iso + 'T00:00:00');
-  return Math.round((target - today) / 86400000);
-}
-
-/** Статус напоминания — ровно два состояния: активно / просрочено. */
-function reminderStatus(iso) {
-  return daysUntil(iso) < 0
-    ? { key: 'overdue', label: 'Просрочено' }
-    : { key: 'active', label: 'Активно' };
-}
-
 function emptyRow(text) {
   return `<div class="empty small">${text}</div>`;
 }
@@ -70,7 +57,7 @@ function repairRowHTML(expense) {
   `;
 }
 
-const REMINDER_TYPE_LABEL = { tech: 'ТО', insurance: 'Страховка', oil: 'Масло', tires: 'Шины', other: 'Другое' };
+
 
 function reminderRowHTML(reminder) {
   const status = reminderStatus(reminder.dueDate);
