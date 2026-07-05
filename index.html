@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Мой транспорт</title>
+<meta name="theme-color" content="#0B0B0D">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <header class="topbar">
+    <h1>Мой транспорт</h1>
+    <p class="topbar-sub" id="fleet-count">— автомобилей в парке</p>
+  </header>
+
+  <main class="list" id="vehicle-list" aria-live="polite">
+    <!-- карточки автомобилей рендерятся через script.js -->
+  </main>
+
+  <button class="fab" id="add-vehicle-btn" type="button">
+    <span class="fab-icon" aria-hidden="true">+</span>
+    <span class="fab-label">Добавить автомобиль</span>
+  </button>
+
+  <script src="icons.js"></script>
+  <script src="db.js"></script>
+  <script src="storage.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
