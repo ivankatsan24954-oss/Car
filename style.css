@@ -23,6 +23,10 @@
 
 * { box-sizing: border-box; }
 
+/* Критично: без этого правила атрибут [hidden] проигрывает display:flex у .modal-overlay,
+   и модальные окна остаются видимыми поверх всего интерфейса даже когда должны быть скрыты. */
+[hidden] { display: none !important; }
+
 html, body {
   margin: 0;
   padding: 0;
