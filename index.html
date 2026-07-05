@@ -108,6 +108,17 @@
     </div>
   </div>
 
+  <!-- Уведомление: скорые и просроченные напоминания -->
+  <div class="modal-overlay" id="reminders-overlay" hidden>
+    <div class="modal-sheet modal-sheet-small" role="dialog" aria-modal="true" aria-labelledby="reminders-title">
+      <div class="modal-head">
+        <h2 id="reminders-title">🔔 Напоминания</h2>
+        <button class="icon-btn" id="close-reminders-modal" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <div class="stack" id="reminders-modal-list"></div>
+    </div>
+  </div>
+
   <!-- Меню: резервная копия -->
   <div class="modal-overlay" id="menu-overlay" hidden>
     <div class="modal-sheet modal-sheet-small" role="dialog" aria-modal="true" aria-labelledby="menu-title">
