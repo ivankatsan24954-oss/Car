@@ -358,6 +358,16 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+const closeMenuBtn = document.getElementById(`close-menu`);
+const menuOverlay = document.getElementById(`menu-overlay`);
+
+if (closeMenuBtn && menuOverlay) {
+   closeMenuBtn.addEventListener(`click`, (e) => {
+      e.preventDefault();
+      menuOverlay.setAttribute(`hiddent`, ``);
+   });
+}
+
 // ---------- Инициализация ----------
 
 renderCarDetail().catch(err => {
