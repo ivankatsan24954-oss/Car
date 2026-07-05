@@ -49,12 +49,12 @@ async function renderVehicles() {
 
 (async function init() {
   await renderVehicles();
-  await checkUpcomingReminders();
+  await checkUpcomingRemindersOnLoad();
 })();
 
-// ---------- Уведомление: скорые и просроченные напоминания по всем машинам ----------
+// ---------- Напоминания: кнопка-колокольчик + автопоказ при открытии ----------
 
-const REMINDER_ALERT_THRESHOLD_DAYS = 2; // показывать: просроченные + сегодня/завтра/через 2 дня
+const REMINDER_ALERT_THRESHOLD_DAYS = 2; // "срочные": просроченные + сегодня/завтра/через 2 дня
 
 function reminderAlertRowHTML(reminder, car) {
   const icon = REMINDER_ICONS[reminder.type] || REMINDER_ICONS.other;
@@ -72,21 +72,39 @@ function reminderAlertRowHTML(reminder, car) {
   `;
 }
 
-async function checkUpcomingReminders() {
+/** Возвращает срочные напоминания (просроченные и близкие) по всем машинам сразу. */
+async function getUrgentReminders() {
   const [reminders, cars] = await Promise.all([getReminders(), getCars()]);
   const carsById = Object.fromEntries(cars.map(c => [c.id, c]));
-
   const relevant = reminders
     .filter(r => !r.done && daysUntil(r.dueDate) <= REMINDER_ALERT_THRESHOLD_DAYS)
     .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+  return { relevant, carsById };
+}
 
-  if (!relevant.length) return;
+function renderRemindersModal(relevant, carsById) {
+  document.getElementById('reminders-modal-list').innerHTML = relevant.length
+    ? relevant.map(r => reminderAlertRowHTML(r, carsById[r.carId])).join('')
+    : `<div class="empty small">Срочных напоминаний нет 👍</div>`;
+}
 
-  document.getElementById('reminders-modal-list').innerHTML = relevant
-    .map(r => reminderAlertRowHTML(r, carsById[r.carId]))
-    .join('');
+/** Открыть окно напоминаний по нажатию на колокольчик — показывает и пустое состояние. */
+async function openRemindersModal() {
+  const { relevant, carsById } = await getUrgentReminders();
+  renderRemindersModal(relevant, carsById);
   document.getElementById('reminders-overlay').hidden = false;
 }
+
+/** Автопоказ при открытии приложения — если срочных напоминаний нет, окно не появляется. */
+async function checkUpcomingRemindersOnLoad() {
+  const { relevant, carsById } = await getUrgentReminders();
+  document.getElementById('reminders-badge').hidden = relevant.length === 0;
+  if (!relevant.length) return;
+  renderRemindersModal(relevant, carsById);
+  document.getElementById('reminders-overlay').hidden = false;
+}
+
+document.getElementById('reminders-btn').addEventListener('click', openRemindersModal);
 
 const remindersOverlay = document.getElementById('reminders-overlay');
 document.getElementById('close-reminders-modal').addEventListener('click', () => { remindersOverlay.hidden = true; });

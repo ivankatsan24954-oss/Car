@@ -87,6 +87,24 @@ h1, h2, h3 { margin: 0; }
   font-size: 24px;
 }
 
+.topbar-bell-btn {
+  position: absolute;
+  top: 24px;
+  right: 60px;
+  font-size: 19px;
+}
+
+.bell-badge {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--danger);
+  box-shadow: 0 0 0 2px var(--bg);
+}
+
 /* ---------- Список автомобилей ---------- */
 
 .list {
