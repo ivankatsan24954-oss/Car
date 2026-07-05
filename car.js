@@ -11,10 +11,6 @@ function formatMoney(n) {
   return Math.round(n || 0).toLocaleString('ru-RU') + ' ₽';
 }
 
-function formatMileage(km, unit = 'км') {
-  return Number(km || 0).toLocaleString('ru-RU') + ' ' + unit;
-}
-
 function formatDateRu(iso) {
   if (!iso) return '—';
   const [y, m, d] = iso.split('-').map(Number);
@@ -32,7 +28,7 @@ function daysUntil(iso) {
   return Math.round((target - today) / 86400000);
 }
 
-/** Статус напоминания — ровно два состояния, как просили: активно / просрочено. */
+/** Статус напоминания — ровно два состояния: активно / просрочено. */
 function reminderStatus(iso) {
   return daysUntil(iso) < 0
     ? { key: 'overdue', label: 'Просрочено' }
@@ -41,10 +37,6 @@ function reminderStatus(iso) {
 
 function emptyRow(text) {
   return `<div class="empty small">${text}</div>`;
-}
-
-function escapeHTML(str) {
-  return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
 }
 
 // ---------- Разметка строк ----------
@@ -102,6 +94,10 @@ function fallbackPhotoHTML(type) {
   return `<div class="photo-fallback">${icon}</div>`;
 }
 
+function photoSrc(photo) {
+  return typeof photo.data === 'string' ? photo.data : URL.createObjectURL(photo.data);
+}
+
 // ---------- Загрузка и рендер секций ----------
 
 async function renderExpensesAndRepairs() {
@@ -124,6 +120,18 @@ async function renderReminders() {
   document.getElementById('reminders-list').innerHTML = reminders.length
     ? reminders.map(reminderRowHTML).join('')
     : emptyRow('Напоминаний нет');
+}
+
+async function renderPhoto(car) {
+  const photoFrame = document.getElementById('photo-frame');
+  if (car.mainPhotoId) {
+    const photo = await getPhoto(car.mainPhotoId);
+    photoFrame.innerHTML = photo
+      ? `<img src="${photoSrc(photo)}" alt="Фото ${escapeHTML(car.name)}" class="photo-img">`
+      : fallbackPhotoHTML(car.type);
+  } else {
+    photoFrame.innerHTML = fallbackPhotoHTML(car.type);
+  }
 }
 
 async function renderCarDetail() {
@@ -152,15 +160,7 @@ async function renderCarDetail() {
   statusEl.className = `status-chip status-${car.status}`;
   statusEl.innerHTML = `<span class="dot"></span>${STATUS_LABEL[car.status] || STATUS_LABEL.ok}`;
 
-  const photoFrame = document.getElementById('photo-frame');
-  if (car.mainPhotoId) {
-    const photo = await getPhoto(car.mainPhotoId);
-    photoFrame.innerHTML = photo
-      ? `<img src="${typeof photo.data === 'string' ? photo.data : URL.createObjectURL(photo.data)}" alt="Фото ${escapeHTML(car.name)}" class="photo-img">`
-      : fallbackPhotoHTML(car.type);
-  } else {
-    photoFrame.innerHTML = fallbackPhotoHTML(car.type);
-  }
+  await renderPhoto(car);
 
   document.getElementById('info-make').textContent = car.make || '—';
   document.getElementById('info-model').textContent = car.model || '—';
@@ -274,6 +274,30 @@ reminderForm.addEventListener('submit', async (e) => {
   }
 });
 
+// ---------- Фото автомобиля (загрузка из галереи) ----------
+
+document.getElementById('photo-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  if (!file.type.startsWith('image/')) {
+    alert('Выберите файл изображения');
+    e.target.value = '';
+    return;
+  }
+
+  try {
+    await addPhoto(CURRENT_CAR_ID, file, { setAsMain: true });
+    const car = await getCar(CURRENT_CAR_ID);
+    await renderPhoto(car);
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось сохранить фото: ' + err.message);
+  } finally {
+    e.target.value = '';
+  }
+});
+
 // ---------- Удаление записей (делегирование кликов) ----------
 
 document.getElementById('car-detail').addEventListener('click', async (e) => {
@@ -304,11 +328,35 @@ document.getElementById('car-detail').addEventListener('click', async (e) => {
   }
 });
 
+// ---------- Удаление автомобиля насовсем ----------
+
+document.getElementById('delete-car-btn').addEventListener('click', async () => {
+  const car = await getCar(CURRENT_CAR_ID);
+  const name = car ? car.name : 'этот автомобиль';
+  if (!confirm(`Удалить «${name}» насовсем?\nБудут удалены все расходы, напоминания и фото. Это действие нельзя отменить.`)) return;
+
+  try {
+    await deleteCar(CURRENT_CAR_ID);
+    window.location.href = 'index.html';
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось удалить автомобиль: ' + err.message);
+  }
+});
+
 // ---------- Навигация назад ----------
 
 document.getElementById('back-btn').addEventListener('click', () => {
   window.location.href = 'index.html';
 });
+
+// ---------- PWA: регистрация service worker ----------
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}
 
 // ---------- Инициализация ----------
 

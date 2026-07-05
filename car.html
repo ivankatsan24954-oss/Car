@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Мой транспорт — карточка автомобиля</title>
 <meta name="theme-color" content="#0B0B0D">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -23,6 +26,11 @@
     <div class="photo-frame" id="photo-frame">
       <div class="photo-skeleton" id="photo-skeleton"></div>
     </div>
+
+    <label class="add-row-btn photo-upload-btn" id="photo-upload-label">
+      🖼️ Изменить фото
+      <input type="file" id="photo-input" accept="image/*" hidden>
+    </label>
 
     <!-- Название + статус -->
     <div class="detail-heading">
@@ -121,6 +129,14 @@
       </form>
 
       <div class="stack" id="reminders-list"></div>
+    </section>
+
+    <!-- Опасная зона -->
+    <section class="section">
+      <div class="section-head">
+        <h3>Опасная зона</h3>
+      </div>
+      <button class="btn-danger" id="delete-car-btn" type="button">🗑 Удалить автомобиль насовсем</button>
     </section>
 
   </main>

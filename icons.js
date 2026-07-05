@@ -57,9 +57,17 @@ const REMINDER_ICONS = {
 
 const STATUS_LABEL = { ok: 'На ходу', repair: 'Ремонт', sold: 'Продан' };
 
+/** Экранирует пользовательский текст перед вставкой в innerHTML. */
+function escapeHTML(str) {
+  return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+}
+
+function formatMileage(km, unit = 'км') {
+  return Number(km || 0).toLocaleString('ru-RU') + ' ' + unit;
+}
+
 // Эмодзи-силуэты для генерации "фотографии" автомобиля (канвас -> base64 PNG).
-// Реальных фото нет — вместо этого рисуем узнаваемую заглушку и сохраняем её
-// в IndexedDB через addPhoto(), чтобы экран деталей брал фото из базы, а не из кода.
+// Используется как запасной вариант, если у автомобиля ещё нет реального фото.
 const VEHICLE_EMOJI = { car: '🚗', van: '🚐', pickup: '🛻', excavator: '🚜', moto: '🏍️' };
 
 function generateCarPhotoDataURL(type) {

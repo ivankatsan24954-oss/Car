@@ -289,6 +289,52 @@ async function deletePhotosByCar(carId) {
   return DB.deleteByIndex(DB.STORES.photos, 'carId', carId);
 }
 
+// =========================================================
+//                    ЭКСПОРТ / ИМПОРТ (бэкап)
+// =========================================================
+
+/**
+ * Выгружает все данные приложения в один JSON-объект — удобно для бэкапа
+ * перед переустановкой приложения или сменой телефона.
+ */
+async function exportAllData() {
+  const [cars, expenses, reminders, photos] = await Promise.all([
+    DB.getAll(DB.STORES.cars),
+    DB.getAll(DB.STORES.expenses),
+    DB.getAll(DB.STORES.reminders),
+    DB.getAll(DB.STORES.photos)
+  ]);
+
+  // Blob нельзя сериализовать в JSON — конвертируем фото в base64.
+  const safePhotos = await Promise.all(photos.map(async p => ({
+    ...p,
+    data: typeof p.data === 'string' ? p.data : await blobToBase64(p.data)
+  })));
+
+  return {
+    exportedAt: nowISO(),
+    version: DB.STORES ? 1 : 1,
+    cars, expenses, reminders,
+    photos: safePhotos
+  };
+}
+
+/**
+ * Восстанавливает данные из объекта, созданного exportAllData().
+ * По умолчанию дополняет текущие данные (не удаляя существующее).
+ */
+async function importAllData(payload) {
+  if (!payload || typeof payload !== 'object') throw new Error('Некорректный файл резервной копии');
+  const { cars = [], expenses = [], reminders = [], photos = [] } = payload;
+
+  for (const car of cars) await DB.put(DB.STORES.cars, car);
+  for (const expense of expenses) await DB.put(DB.STORES.expenses, expense);
+  for (const reminder of reminders) await DB.put(DB.STORES.reminders, reminder);
+  for (const photo of photos) await DB.put(DB.STORES.photos, photo);
+
+  return { cars: cars.length, expenses: expenses.length, reminders: reminders.length, photos: photos.length };
+}
+
 // ---------- Экспорт в глобальную область ----------
 
 window.addCar = addCar;
@@ -318,11 +364,15 @@ window.deletePhotosByCar = deletePhotosByCar;
 window.blobToBase64 = blobToBase64;
 window.base64ToBlob = base64ToBlob;
 
+window.exportAllData = exportAllData;
+window.importAllData = importAllData;
+
 // Также группируем всё в один объект — удобно для импорта одним именем
 window.Storage = {
   addCar, getCars, getCar, updateCar, deleteCar,
   addExpense, getExpenses, getExpense, updateExpense, deleteExpense,
   addReminder, getReminders, getReminder, updateReminder, deleteReminder,
   addPhoto, getPhotos, getPhoto, deletePhoto, deletePhotosByCar,
-  blobToBase64, base64ToBlob
+  blobToBase64, base64ToBlob,
+  exportAllData, importAllData
 };

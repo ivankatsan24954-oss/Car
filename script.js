@@ -2,19 +2,15 @@
    Данные читаются из IndexedDB через storage.js. При первом запуске
    (если база пуста) создаётся демонстрационный набор данных. */
 
-function formatMileage(km, unit = 'км') {
-  return Number(km || 0).toLocaleString('ru-RU') + ' ' + unit;
-}
-
 function vehicleCardHTML(car) {
   const icon = VEHICLE_ICONS[car.type] || VEHICLE_ICONS.car;
   return `
-    <article class="vehicle-card ${car.status === 'sold' ? 'is-sold' : ''}" data-id="${car.id}" tabindex="0" role="button" aria-label="Открыть ${car.name}">
+    <article class="vehicle-card ${car.status === 'sold' ? 'is-sold' : ''}" data-id="${car.id}" tabindex="0" role="button" aria-label="Открыть ${escapeHTML(car.name)}">
       <div class="vehicle-photo">${icon}</div>
       <div class="vehicle-info">
-        <h2 class="vehicle-name">${car.name}</h2>
+        <h2 class="vehicle-name">${escapeHTML(car.name)}</h2>
         <div class="vehicle-meta-row">
-          <span class="plate">${car.plate || '—'}</span>
+          <span class="plate">${escapeHTML(car.plate) || '—'}</span>
           <span class="mileage-dot">•</span>
           <span class="mileage">${formatMileage(car.mileage, car.unit)}</span>
         </div>
@@ -42,7 +38,7 @@ async function renderVehicles() {
 
   list.innerHTML = cars.length
     ? cars.map(vehicleCardHTML).join('')
-    : `<div class="empty">Автомобилей пока нет</div>`;
+    : `<div class="empty">Автомобилей пока нет.<br>Нажмите «Добавить автомобиль», чтобы завести первую карточку.</div>`;
 
   list.querySelectorAll('.vehicle-card').forEach(card => {
     const open = () => { window.location.href = `car.html?id=${card.dataset.id}`; };
@@ -114,7 +110,116 @@ async function seedIfEmpty() {
   await renderVehicles();
 })();
 
-// ---------- Кнопка добавления (демо-заглушка — форма не входит в это ТЗ) ----------
-document.getElementById('add-vehicle-btn').addEventListener('click', () => {
-  alert('Экран добавления автомобиля будет реализован отдельно.');
+// ---------- Модалка «Добавить автомобиль» ----------
+
+const addOverlay = document.getElementById('add-vehicle-overlay');
+const addForm = document.getElementById('add-vehicle-form');
+
+function openAddVehicle() {
+  addOverlay.hidden = false;
+  addForm.querySelector('input[name="make"]').focus();
+}
+
+function closeAddVehicle() {
+  addOverlay.hidden = true;
+  addForm.reset();
+}
+
+document.getElementById('add-vehicle-btn').addEventListener('click', openAddVehicle);
+document.getElementById('close-add-vehicle').addEventListener('click', closeAddVehicle);
+document.getElementById('cancel-add-vehicle').addEventListener('click', closeAddVehicle);
+addOverlay.addEventListener('click', (e) => { if (e.target === addOverlay) closeAddVehicle(); });
+
+addForm.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const fd = new FormData(addForm);
+  const data = Object.fromEntries(fd.entries());
+  const photoFile = fd.get('photo');
+
+  if (!data.make?.trim() && !data.model?.trim() && !data.name?.trim()) {
+    alert('Укажите хотя бы марку, модель или название автомобиля');
+    return;
+  }
+
+  const submitBtn = addForm.querySelector('button[type="submit"]');
+  submitBtn.disabled = true;
+  try {
+    const car = await addCar({
+      make: data.make, model: data.model, name: data.name,
+      type: data.type, year: data.year ? Number(data.year) : null,
+      plate: data.plate, vin: data.vin,
+      mileage: data.mileage, unit: data.unit, status: data.status
+    });
+
+    if (photoFile && photoFile.size > 0) {
+      await addPhoto(car.id, photoFile, { setAsMain: true });
+    } else {
+      await addPhoto(car.id, generateCarPhotoDataURL(car.type), { setAsMain: true });
+    }
+
+    closeAddVehicle();
+    await renderVehicles();
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось добавить автомобиль: ' + err.message);
+  } finally {
+    submitBtn.disabled = false;
+  }
 });
+
+// ---------- Меню: резервная копия данных ----------
+
+const menuOverlay = document.getElementById('menu-overlay');
+
+document.getElementById('menu-btn').addEventListener('click', () => { menuOverlay.hidden = false; });
+document.getElementById('close-menu').addEventListener('click', () => { menuOverlay.hidden = true; });
+menuOverlay.addEventListener('click', (e) => { if (e.target === menuOverlay) menuOverlay.hidden = true; });
+
+document.getElementById('export-data-btn').addEventListener('click', async () => {
+  try {
+    const payload = await exportAllData();
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `moy-transport-backup-${todayStamp()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось создать резервную копию: ' + err.message);
+  }
+});
+
+document.getElementById('import-data-input').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    const result = await importAllData(payload);
+    alert(`Восстановлено: ${result.cars} авто, ${result.expenses} расходов, ${result.reminders} напоминаний, ${result.photos} фото`);
+    menuOverlay.hidden = true;
+    await renderVehicles();
+  } catch (err) {
+    console.error(err);
+    alert('Не удалось восстановить данные: файл повреждён или имеет неверный формат');
+  } finally {
+    e.target.value = '';
+  }
+});
+
+function todayStamp() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// ---------- PWA: регистрация service worker ----------
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('SW registration failed:', err));
+  });
+}

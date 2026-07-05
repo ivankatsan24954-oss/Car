@@ -5,6 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Мой транспорт</title>
 <meta name="theme-color" content="#0B0B0D">
+<meta name="description" content="Учёт транспорта: расходы, ремонты, напоминания">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&family=Roboto+Mono:wght@500&display=swap" rel="stylesheet">
@@ -15,6 +19,7 @@
   <header class="topbar">
     <h1>Мой транспорт</h1>
     <p class="topbar-sub" id="fleet-count">— автомобилей в парке</p>
+    <button class="icon-btn topbar-menu-btn" id="menu-btn" type="button" aria-label="Ещё">⋮</button>
   </header>
 
   <main class="list" id="vehicle-list" aria-live="polite">
@@ -25,6 +30,101 @@
     <span class="fab-icon" aria-hidden="true">+</span>
     <span class="fab-label">Добавить автомобиль</span>
   </button>
+
+  <!-- Модалка: добавить автомобиль -->
+  <div class="modal-overlay" id="add-vehicle-overlay" hidden>
+    <div class="modal-sheet" role="dialog" aria-modal="true" aria-labelledby="add-vehicle-title">
+      <div class="modal-head">
+        <h2 id="add-vehicle-title">Новый автомобиль</h2>
+        <button class="icon-btn" id="close-add-vehicle" type="button" aria-label="Закрыть">✕</button>
+      </div>
+
+      <form class="modal-form" id="add-vehicle-form">
+        <label>Тип транспорта
+          <select name="type">
+            <option value="car">Легковой</option>
+            <option value="van">Микроавтобус</option>
+            <option value="pickup">Пикап</option>
+            <option value="excavator">Спецтехника</option>
+            <option value="moto">Мото</option>
+          </select>
+        </label>
+
+        <div class="form-row">
+          <label>Марка
+            <input type="text" name="make" placeholder="Toyota" autocomplete="off">
+          </label>
+          <label>Модель
+            <input type="text" name="model" placeholder="Camry" autocomplete="off">
+          </label>
+        </div>
+
+        <label>Название карточки
+          <input type="text" name="name" placeholder="Необязательно — по умолчанию марка + модель" autocomplete="off">
+        </label>
+
+        <div class="form-row">
+          <label>Год
+            <input type="number" name="year" placeholder="2022" min="1950" max="2100">
+          </label>
+          <label>Госномер
+            <input type="text" name="plate" placeholder="А 123 ВС 777" autocomplete="off">
+          </label>
+        </div>
+
+        <label>VIN
+          <input type="text" name="vin" placeholder="Необязательно" autocomplete="off">
+        </label>
+
+        <div class="form-row">
+          <label>Пробег
+            <input type="number" name="mileage" placeholder="0" min="0">
+          </label>
+          <label>Единицы
+            <select name="unit">
+              <option value="км">км</option>
+              <option value="м/ч">м/ч (моточасы)</option>
+            </select>
+          </label>
+        </div>
+
+        <label>Статус
+          <select name="status">
+            <option value="ok">На ходу</option>
+            <option value="repair">Ремонт</option>
+            <option value="sold">Продан</option>
+          </select>
+        </label>
+
+        <label>Фото
+          <input type="file" name="photo" accept="image/*">
+        </label>
+
+        <div class="form-actions">
+          <button type="button" class="btn-ghost" id="cancel-add-vehicle">Отмена</button>
+          <button type="submit" class="btn-accent">Добавить</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Меню: резервная копия -->
+  <div class="modal-overlay" id="menu-overlay" hidden>
+    <div class="modal-sheet modal-sheet-small" role="dialog" aria-modal="true" aria-labelledby="menu-title">
+      <div class="modal-head">
+        <h2 id="menu-title">Данные</h2>
+        <button class="icon-btn" id="close-menu" type="button" aria-label="Закрыть">✕</button>
+      </div>
+      <p class="section-hint">Все данные хранятся локально на этом устройстве (IndexedDB). Сделайте резервную копию, чтобы не потерять их при переустановке приложения или смене телефона.</p>
+      <div class="menu-actions">
+        <button class="btn-secondary" id="export-data-btn" type="button">⭳ Скачать резервную копию</button>
+        <label class="btn-secondary file-btn">
+          ⭱ Восстановить из файла
+          <input type="file" id="import-data-input" accept="application/json">
+        </label>
+      </div>
+    </div>
+  </div>
 
   <script src="icons.js"></script>
   <script src="db.js"></script>
