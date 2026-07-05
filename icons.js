@@ -70,6 +70,40 @@ function formatMileage(km, unit = 'км') {
 // Используется как запасной вариант, если у автомобиля ещё нет реального фото.
 const VEHICLE_EMOJI = { car: '🚗', van: '🚐', pickup: '🛻', excavator: '🚜', moto: '🏍️' };
 
+// ---------- Напоминания: общие метки и подсчёт дней (используется и в списке машин, и в карточке) ----------
+
+const REMINDER_TYPE_LABEL = { tech: 'ТО', insurance: 'Страховка', oil: 'Замена масла', tires: 'Замена шин', other: 'Напоминание' };
+
+function daysUntil(iso) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const target = new Date(iso + 'T00:00:00');
+  return Math.round((target - today) / 86400000);
+}
+
+function pluralDays(n) {
+  const abs = Math.abs(n);
+  const mod10 = abs % 10, mod100 = abs % 100;
+  if (mod10 === 1 && mod100 !== 11) return 'день';
+  if ([2, 3, 4].includes(mod10) && ![12, 13, 14].includes(mod100)) return 'дня';
+  return 'дней';
+}
+
+/** Человекочитаемый срок: "Через 2 дня", "Завтра", "Сегодня", "Просрочено на 3 дня". */
+function reminderDueText(iso) {
+  const d = daysUntil(iso);
+  if (d < 0) return `Просрочено на ${Math.abs(d)} ${pluralDays(d)}`;
+  if (d === 0) return 'Сегодня';
+  if (d === 1) return 'Завтра';
+  return `Через ${d} ${pluralDays(d)}`;
+}
+
+/** Статус напоминания — ровно два состояния: активно / просрочено. */
+function reminderStatus(iso) {
+  return daysUntil(iso) < 0
+    ? { key: 'overdue', label: 'Просрочено' }
+    : { key: 'active', label: 'Активно' };
+}
+
 function generateCarPhotoDataURL(type) {
   const canvas = document.createElement('canvas');
   canvas.width = 800;
