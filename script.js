@@ -49,7 +49,48 @@ async function renderVehicles() {
 
 (async function init() {
   await renderVehicles();
+  await checkUpcomingReminders();
 })();
+
+// ---------- Уведомление: скорые и просроченные напоминания по всем машинам ----------
+
+const REMINDER_ALERT_THRESHOLD_DAYS = 2; // показывать: просроченные + сегодня/завтра/через 2 дня
+
+function reminderAlertRowHTML(reminder, car) {
+  const icon = REMINDER_ICONS[reminder.type] || REMINDER_ICONS.other;
+  const label = REMINDER_TYPE_LABEL[reminder.type] || 'Напоминание';
+  const status = reminderStatus(reminder.dueDate);
+  return `
+    <div class="list-row">
+      <div class="row-icon">${icon}</div>
+      <div class="row-main">
+        <div class="row-title">${escapeHTML(label)} — ${escapeHTML(car ? car.name : 'Автомобиль удалён')}</div>
+        <div class="row-sub">${reminderDueText(reminder.dueDate)}${reminder.note ? ' • ' + escapeHTML(reminder.note) : ''}</div>
+      </div>
+      <span class="status-pill status-pill-${status.key}">${status.label}</span>
+    </div>
+  `;
+}
+
+async function checkUpcomingReminders() {
+  const [reminders, cars] = await Promise.all([getReminders(), getCars()]);
+  const carsById = Object.fromEntries(cars.map(c => [c.id, c]));
+
+  const relevant = reminders
+    .filter(r => !r.done && daysUntil(r.dueDate) <= REMINDER_ALERT_THRESHOLD_DAYS)
+    .sort((a, b) => (a.dueDate || '').localeCompare(b.dueDate || ''));
+
+  if (!relevant.length) return;
+
+  document.getElementById('reminders-modal-list').innerHTML = relevant
+    .map(r => reminderAlertRowHTML(r, carsById[r.carId]))
+    .join('');
+  document.getElementById('reminders-overlay').hidden = false;
+}
+
+const remindersOverlay = document.getElementById('reminders-overlay');
+document.getElementById('close-reminders-modal').addEventListener('click', () => { remindersOverlay.hidden = true; });
+remindersOverlay.addEventListener('click', (e) => { if (e.target === remindersOverlay) remindersOverlay.hidden = true; });
 
 // ---------- Модалка «Добавить автомобиль» ----------
 
