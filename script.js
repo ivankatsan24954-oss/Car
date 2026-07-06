@@ -171,8 +171,11 @@ function renderPlateGhost(ghostEl, value, hintChars) {
   ghostEl.innerHTML = html;
 }
 
-/** Привязывает фильтрацию ввода + подсказку-образец к полю номера/региона. Возвращает функцию сброса. */
+/** Привязывает фильтрацию ввода + подсказку-образец к полю номера/региона. Возвращает функцию сброса.
+ *  Если элемент не найден (например, index.html и script.js разошлись по версии),
+ *  просто ничего не делает — это не должно ронять остальную часть скрипта. */
 function attachPlateMask(inputEl, ghostEl, hintChars, filterFn, maxLen) {
+  if (!inputEl || !ghostEl) return () => {};
   function handleInput() {
     const caret = inputEl.selectionStart;
     const before = inputEl.value;
