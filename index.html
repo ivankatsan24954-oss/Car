@@ -72,9 +72,19 @@
           <label>Год
             <input type="number" name="year" placeholder="2022" min="1950" max="2100">
           </label>
-          <label>Госномер
-            <input type="text" name="plate" placeholder="А 123 ВС 777" autocomplete="off">
-          </label>
+          <div class="plate-field-group">
+            <span class="plate-field-label">Госномер</span>
+            <div class="plate-field-inputs">
+              <div class="plate-input-ghost-wrap plate-main">
+                <input type="text" name="plate" id="add-plate-input" autocomplete="off" spellcheck="false" aria-label="Госномер">
+                <div class="plate-input-ghost" id="add-plate-ghost" aria-hidden="true"></div>
+              </div>
+              <div class="plate-input-ghost-wrap plate-region">
+                <input type="text" name="plateRegion" id="add-plate-region-input" autocomplete="off" spellcheck="false" inputmode="numeric" aria-label="Регион">
+                <div class="plate-input-ghost" id="add-plate-region-ghost" aria-hidden="true"></div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <label>VIN

@@ -144,6 +144,59 @@ remindersOverlay.addEventListener('click', (e) => { if (e.target === remindersOv
 const addOverlay = document.getElementById('add-vehicle-overlay');
 const addForm = document.getElementById('add-vehicle-form');
 
+// ---------- Маска гос. номера с подсказкой (только форма добавления) ----------
+
+const PLATE_ALLOWED_LETTERS = new Set(['А', 'В', 'Е', 'К', 'М', 'Н', 'О', 'Р', 'С', 'Т', 'У', 'Х']);
+const PLATE_HINT_CHARS = ['А', '1', '2', '3', 'В', 'С'];
+const PLATE_REGION_HINT_CHARS = ['7', '7'];
+
+/** Оставляет только цифры и разрешённые по ГОСТу буквы, приводит к верхнему регистру. */
+function filterPlateValue(raw) {
+  return Array.from(raw.toUpperCase()).filter(ch => /[0-9]/.test(ch) || PLATE_ALLOWED_LETTERS.has(ch)).join('');
+}
+
+/** Для поля региона допустимы только цифры. */
+function filterRegionValue(raw) {
+  return raw.replace(/\D/g, '');
+}
+
+/** Рисует уже введённые символы обычным цветом, а оставшиеся по образцу — серым. */
+function renderPlateGhost(ghostEl, value, hintChars) {
+  let html = '';
+  for (let i = 0; i < hintChars.length; i++) {
+    html += i < value.length
+      ? `<span class="plate-ghost-typed">${escapeHTML(value[i])}</span>`
+      : `<span class="plate-ghost-hint">${escapeHTML(hintChars[i])}</span>`;
+  }
+  ghostEl.innerHTML = html;
+}
+
+/** Привязывает фильтрацию ввода + подсказку-образец к полю номера/региона. Возвращает функцию сброса. */
+function attachPlateMask(inputEl, ghostEl, hintChars, filterFn, maxLen) {
+  function handleInput() {
+    const caret = inputEl.selectionStart;
+    const before = inputEl.value;
+    const caretAfterFilter = filterFn(before.slice(0, caret)).length;
+    const filtered = filterFn(before).slice(0, maxLen);
+    inputEl.value = filtered;
+    const newCaret = Math.min(caretAfterFilter, filtered.length);
+    inputEl.setSelectionRange(newCaret, newCaret);
+    renderPlateGhost(ghostEl, filtered, hintChars);
+  }
+  inputEl.addEventListener('input', handleInput);
+  renderPlateGhost(ghostEl, inputEl.value, hintChars);
+  return () => renderPlateGhost(ghostEl, inputEl.value, hintChars);
+}
+
+const plateInput = document.getElementById('add-plate-input');
+const plateRegionInput = document.getElementById('add-plate-region-input');
+const refreshPlateGhost = attachPlateMask(
+  plateInput, document.getElementById('add-plate-ghost'), PLATE_HINT_CHARS, filterPlateValue, PLATE_HINT_CHARS.length
+);
+const refreshPlateRegionGhost = attachPlateMask(
+  plateRegionInput, document.getElementById('add-plate-region-ghost'), PLATE_REGION_HINT_CHARS, filterRegionValue, 3
+);
+
 function openAddVehicle() {
   addOverlay.hidden = false;
   addForm.querySelector('input[name="make"]').focus();
@@ -152,6 +205,8 @@ function openAddVehicle() {
 function closeAddVehicle() {
   addOverlay.hidden = true;
   addForm.reset();
+  refreshPlateGhost();
+  refreshPlateRegionGhost();
 }
 
 document.getElementById('add-vehicle-btn').addEventListener('click', openAddVehicle);
@@ -164,6 +219,7 @@ addForm.addEventListener('submit', async (e) => {
   const fd = new FormData(addForm);
   const data = Object.fromEntries(fd.entries());
   const photoFile = fd.get('photo');
+  const plate = [data.plate, data.plateRegion].filter(Boolean).join(' ').trim();
 
   if (!data.make?.trim() && !data.model?.trim() && !data.name?.trim()) {
     alert('Укажите хотя бы марку, модель или название автомобиля');
@@ -176,7 +232,7 @@ addForm.addEventListener('submit', async (e) => {
     const car = await addCar({
       make: data.make, model: data.model, name: data.name,
       type: data.type, year: data.year ? Number(data.year) : null,
-      plate: data.plate, vin: data.vin,
+      plate, vin: data.vin,
       mileage: data.mileage, unit: data.unit, status: data.status
     });
 
