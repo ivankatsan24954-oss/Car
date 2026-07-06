@@ -1,23 +1,48 @@
-/* style.css — тёмная тема приложения "Мой транспорт" */
+/* style.css — «Мой транспорт»
+   Визуальный язык: приборная панель гаража. Тёмный, спокойный интерфейс
+   с одним акцентным элементом — номерным знаком (plate-badge), который
+   везде в приложении выглядит как настоящий гос. номер, и статус-индикаторами,
+   стилизованными под лампочки на панели приборов. */
 
 :root {
-  --bg: #0b0b0d;
-  --bg-elevated: #17171a;
-  --bg-card: #1c1c20;
-  --bg-input: #222226;
-  --border: #2a2a2f;
-  --text: #f2f2f2;
-  --text-dim: #a5a5ac;
-  --text-faint: #6d6d75;
-  --accent: #ffcc33;
-  --accent-dim: rgba(255, 204, 51, 0.14);
-  --danger: #ff5c5c;
-  --danger-dim: rgba(255, 92, 92, 0.14);
-  --ok: #3ecf6e;
-  --repair: #ffcc33;
-  --sold: #8a8a92;
-  --radius: 14px;
-  --radius-sm: 10px;
+  --bg: #0A0B0D;
+  --bg-elevated: #131519;
+  --bg-card: #181B20;
+  --bg-input: #1E2127;
+  --border: #262A31;
+  --border-soft: #1D2026;
+
+  --text: #F3F4F6;
+  --text-dim: #99A0AB;
+  --text-faint: #5F6570;
+
+  --accent: #FFB627;              /* амбер поворотника/фар */
+  --accent-ink: #1A1206;          /* тёмный текст на амбере */
+  --accent-dim: rgba(255, 182, 39, 0.14);
+  --accent-glow: rgba(255, 182, 39, 0.35);
+
+  --danger: #FF5470;              /* стоп-сигнал */
+  --danger-dim: rgba(255, 84, 112, 0.14);
+
+  --ok: #2FD98C;                  /* индикатор "всё в порядке" */
+  --ok-dim: rgba(47, 217, 140, 0.14);
+
+  --repair: var(--accent);
+  --sold: #767C87;
+  --sold-dim: rgba(118, 124, 135, 0.14);
+
+  --plate-bg: #F4F5F3;
+  --plate-ink: #14161A;
+  --plate-stripe: #145BD1;
+
+  --radius: 18px;
+  --radius-sm: 11px;
+  --radius-xs: 7px;
+
+  --font-display: 'Barlow Condensed', 'Roboto Condensed', sans-serif;
+  --font-body: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Roboto Mono', monospace;
+
   font-size: 16px;
 }
 
@@ -32,12 +57,12 @@ html, body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: var(--font-body);
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  padding-bottom: 96px;
+  padding-bottom: 100px;
   min-height: 100vh;
 }
 
@@ -48,22 +73,29 @@ button, input, select {
 
 h1, h2, h3 { margin: 0; }
 
-.info-mono, .plate, .row-amount { font-family: 'Roboto Mono', monospace; }
+.info-mono, .row-amount { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
 
 /* ---------- Topbar (главный экран) ---------- */
 
 .topbar {
   position: relative;
-  padding: 28px 20px 16px;
+  padding: 30px 20px 18px;
 }
 
 .topbar h1 {
-  font-size: 26px;
-  font-weight: 900;
+  font-family: var(--font-display);
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
 }
 
 .topbar-sub {
-  margin: 4px 0 0;
+  margin: 5px 0 0;
   color: var(--text-dim);
   font-size: 14px;
 }
@@ -79,18 +111,19 @@ h1, h2, h3 { margin: 0; }
 }
 
 .icon-btn:hover, .icon-btn:active { background: var(--bg-card); color: var(--text); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .topbar-menu-btn {
   position: absolute;
-  top: 24px;
+  top: 26px;
   right: 16px;
   font-size: 24px;
 }
 
 .topbar-bell-btn {
   position: absolute;
-  top: 24px;
-  right: 60px;
+  top: 26px;
+  right: 62px;
   font-size: 19px;
 }
 
@@ -102,13 +135,13 @@ h1, h2, h3 { margin: 0; }
   height: 8px;
   border-radius: 50%;
   background: var(--danger);
-  box-shadow: 0 0 0 2px var(--bg);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 6px 1px var(--danger);
 }
 
 /* ---------- Список автомобилей ---------- */
 
 .list {
-  padding: 4px 16px 16px;
+  padding: 6px 16px 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -121,35 +154,45 @@ h1, h2, h3 { margin: 0; }
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 14px;
+  padding: 12px;
   cursor: pointer;
-  transition: transform .12s ease, border-color .12s ease;
+  transition: transform .12s ease, border-color .12s ease, background .12s ease;
 }
 
 .vehicle-card:active { transform: scale(0.985); }
 .vehicle-card:focus-visible { outline: 2px solid var(--accent); }
-.vehicle-card.is-sold { opacity: 0.55; }
+.vehicle-card.is-sold { opacity: 0.5; }
 
 .vehicle-photo {
-  width: 48px;
-  height: 48px;
+  width: 58px;
+  height: 58px;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 50%;
+  overflow: hidden;
+  border-radius: var(--radius-sm);
   background: var(--accent-dim);
   color: var(--accent);
 }
 
-.vehicle-photo svg { width: 26px; height: 26px; }
+.vehicle-photo svg { width: 28px; height: 28px; }
+
+.vehicle-photo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
 .vehicle-info { flex: 1; min-width: 0; }
 
 .vehicle-name {
-  font-size: 16px;
+  font-family: var(--font-display);
+  font-size: 19px;
   font-weight: 700;
-  margin: 0 0 4px;
+  letter-spacing: 0.01em;
+  margin: 0 0 5px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -158,26 +201,66 @@ h1, h2, h3 { margin: 0; }
 .vehicle-meta-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   font-size: 13px;
   color: var(--text-dim);
 }
 
-.mileage-dot { opacity: 0.5; }
+.mileage-dot { opacity: 0.4; }
 
-/* ---------- Статус-чипы ---------- */
+/* ---------- Номерной знак (фирменный элемент) ---------- */
+
+.plate-badge {
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 1.5px solid #05060a;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06) inset, 0 2px 5px rgba(0,0,0,0.35);
+  line-height: 1;
+}
+
+.plate-badge-text {
+  background: var(--plate-bg);
+  color: var(--plate-ink);
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 12.5px;
+  letter-spacing: 0.03em;
+  padding: 4px 7px;
+  white-space: nowrap;
+}
+
+.plate-badge-region {
+  background: var(--plate-stripe);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 4px;
+}
+
+.plate-badge.is-empty .plate-badge-text { color: var(--text-faint); background: var(--bg-input); }
+.plate-badge.is-empty .plate-badge-region { background: var(--border); }
+
+/* ---------- Статус-чипы (индикаторы приборной панели) ---------- */
 
 .status-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   font-size: 12px;
-  font-weight: 500;
-  padding: 5px 10px;
+  font-weight: 600;
+  padding: 5px 11px;
   border-radius: 999px;
   background: var(--bg-input);
   color: var(--text-dim);
   white-space: nowrap;
+  border: none;
 }
 
 .status-chip .dot {
@@ -185,11 +268,20 @@ h1, h2, h3 { margin: 0; }
   height: 7px;
   border-radius: 50%;
   background: currentColor;
+  box-shadow: 0 0 5px 1px currentColor;
 }
 
-.status-chip.status-ok { color: var(--ok); background: rgba(62, 207, 110, 0.12); }
+.status-chip.status-ok { color: var(--ok); background: var(--ok-dim); }
 .status-chip.status-repair { color: var(--repair); background: var(--accent-dim); }
-.status-chip.status-sold { color: var(--sold); background: rgba(138, 138, 146, 0.12); }
+.status-chip.status-sold { color: var(--sold); background: var(--sold-dim); }
+
+.status-chip.is-tappable {
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+.status-chip.is-tappable:hover, .status-chip.is-tappable:active {
+  border-color: currentColor;
+}
 
 /* ---------- FAB ---------- */
 
@@ -203,14 +295,19 @@ h1, h2, h3 { margin: 0; }
   justify-content: center;
   gap: 8px;
   background: var(--accent);
-  color: #14140f;
+  color: var(--accent-ink);
   border: none;
   border-radius: 999px;
-  padding: 15px 20px;
-  font-size: 15px;
+  padding: 16px 20px;
+  font-family: var(--font-display);
+  font-size: 16px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  box-shadow: 0 8px 24px rgba(255, 204, 51, 0.25);
+  box-shadow: 0 10px 26px rgba(255, 182, 39, 0.25);
+  max-width: 480px;
+  margin: 0 auto;
 }
 
 .fab-icon { font-size: 20px; line-height: 1; }
@@ -220,18 +317,19 @@ h1, h2, h3 { margin: 0; }
 .empty {
   text-align: center;
   color: var(--text-dim);
-  padding: 48px 20px;
-  line-height: 1.5;
+  padding: 52px 20px;
+  line-height: 1.6;
 }
 
-.empty.small { padding: 20px; font-size: 14px; }
+.empty.small { padding: 22px; font-size: 14px; }
 
 /* ---------- Модалки ---------- */
 
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(4, 4, 6, 0.6);
+  backdrop-filter: blur(2px);
   display: flex;
   align-items: flex-end;
   justify-content: center;
@@ -244,7 +342,9 @@ h1, h2, h3 { margin: 0; }
   max-height: 92vh;
   overflow-y: auto;
   background: var(--bg-elevated);
-  border-radius: 20px 20px 0 0;
+  border: 1px solid var(--border-soft);
+  border-bottom: none;
+  border-radius: 22px 22px 0 0;
   padding: 20px;
   animation: sheet-up .18s ease;
 }
@@ -263,7 +363,12 @@ h1, h2, h3 { margin: 0; }
   margin-bottom: 16px;
 }
 
-.modal-head h2 { font-size: 19px; }
+.modal-head h2 {
+  font-family: var(--font-display);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
 
 .modal-form, .inline-form {
   display: flex;
@@ -326,7 +431,7 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
   cursor: pointer;
 }
 
-.btn-accent { background: var(--accent); color: #14140f; }
+.btn-accent { background: var(--accent); color: var(--accent-ink); }
 .btn-ghost { background: var(--bg-input); color: var(--text-dim); }
 .btn-secondary {
   background: var(--bg-input);
@@ -393,8 +498,10 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 }
 
 .detail-topbar h1 {
-  font-size: 17px;
+  font-family: var(--font-display);
+  font-size: 19px;
   font-weight: 700;
+  letter-spacing: 0.01em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -455,7 +562,49 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
   gap: 12px;
 }
 
-.detail-heading h2 { font-size: 20px; font-weight: 700; }
+.detail-heading h2 {
+  font-family: var(--font-display);
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.detail-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.edit-car-btn {
+  font-size: 15px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+}
+
+/* ---------- Выбор статуса (быстрая смена) ---------- */
+
+.status-options {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.status-option {
+  display: flex;
+  justify-content: flex-start;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px;
+  cursor: pointer;
+}
+
+.status-option:hover, .status-option:active {
+  border-color: var(--accent);
+}
+
+.status-option .status-chip { pointer-events: none; }
 
 .card {
   background: var(--bg-card);
@@ -474,9 +623,11 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
 
 .info-label {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-faint);
-  margin-bottom: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 4px;
 }
 
 .info-value { font-size: 15px; font-weight: 500; }
@@ -488,9 +639,16 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
   margin-bottom: 10px;
 }
 
-.section-head h3 { font-size: 15px; color: var(--text-dim); font-weight: 500; text-transform: uppercase; letter-spacing: .02em; }
+.section-head h3 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
 
-.section-total { font-weight: 700; font-size: 15px; }
+.section-total { font-family: var(--font-mono); font-weight: 700; font-size: 15px; }
 
 .section-hint {
   font-size: 13px;
@@ -559,8 +717,60 @@ input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1
   white-space: nowrap;
 }
 
-.status-pill-active { color: var(--ok); background: rgba(62, 207, 110, 0.12); }
+.status-pill-active { color: var(--ok); background: var(--ok-dim); }
 .status-pill-overdue { color: var(--danger); background: var(--danger-dim); }
+.status-pill-done { color: var(--ok); background: var(--ok-dim); }
+.status-pill-in-progress { color: var(--repair); background: var(--accent-dim); }
+
+/* ---------- Детали ремонта (внутри формы расхода и модалки) ---------- */
+
+.repair-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-input);
+  border: 1px dashed var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.repair-fields-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.repair-fields-hint {
+  display: block;
+  font-size: 11px;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+/* ---------- Строка ремонта: сумма + статус в столбик, кнопка редактирования ---------- */
+
+.row-end-stacked {
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.row-edit {
+  background: none;
+  border: none;
+  color: var(--text-faint);
+  font-size: 14px;
+  cursor: pointer;
+  padding: 6px;
+  flex: none;
+}
+
+.row-edit:hover, .row-edit:active { color: var(--accent); }
 
 /* ---------- Скроллбар (десктоп) ---------- */
 

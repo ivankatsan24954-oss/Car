@@ -2,13 +2,15 @@
    Никакой бизнес-логики и никакого UI — только доступ к базе. */
 
 const DB_NAME = 'transportDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = {
   cars: 'cars',
   expenses: 'expenses',
   reminders: 'reminders',
-  photos: 'photos'
+  photos: 'photos',
+  categories: 'categories',
+  settings: 'settings'
 };
 
 let dbPromise = null;
@@ -49,6 +51,17 @@ function openDB() {
         const photos = db.createObjectStore(STORES.photos, { keyPath: 'id' });
         photos.createIndex('carId', 'carId', { unique: false });
         photos.createIndex('createdAt', 'createdAt', { unique: false });
+      }
+
+      // Пользовательские категории расходов (базовые категории в БД не хранятся)
+      if (!db.objectStoreNames.contains(STORES.categories)) {
+        const categories = db.createObjectStore(STORES.categories, { keyPath: 'id' });
+        categories.createIndex('name', 'name', { unique: true });
+      }
+
+      // Настройки приложения (простое хранилище ключ-значение)
+      if (!db.objectStoreNames.contains(STORES.settings)) {
+        db.createObjectStore(STORES.settings, { keyPath: 'key' });
       }
     };
 

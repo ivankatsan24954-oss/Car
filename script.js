@@ -2,15 +2,17 @@
    Данные читаются из IndexedDB через storage.js. При пустой базе
    показывается пустое состояние — никакие демо-машины не создаются. */
 
-function vehicleCardHTML(car) {
-  const icon = VEHICLE_ICONS[car.type] || VEHICLE_ICONS.car;
+function vehicleCardHTML(car, photo) {
+  const photoInner = photo
+    ? `<img src="${photoSrc(photo)}" alt="" class="vehicle-photo-img">`
+    : (VEHICLE_ICONS[car.type] || VEHICLE_ICONS.car);
   return `
     <article class="vehicle-card ${car.status === 'sold' ? 'is-sold' : ''}" data-id="${car.id}" tabindex="0" role="button" aria-label="Открыть ${escapeHTML(car.name)}">
-      <div class="vehicle-photo">${icon}</div>
+      <div class="vehicle-photo">${photoInner}</div>
       <div class="vehicle-info">
         <h2 class="vehicle-name">${escapeHTML(car.name)}</h2>
         <div class="vehicle-meta-row">
-          <span class="plate">${escapeHTML(car.plate) || '—'}</span>
+          ${plateBadgeHTML(car.plate)}
           <span class="mileage-dot">•</span>
           <span class="mileage">${formatMileage(car.mileage, car.unit)}</span>
         </div>
@@ -29,6 +31,15 @@ function pluralVehicles(n) {
   return 'автомобилей';
 }
 
+// Blob URL-ы, созданные для фото в списке на предыдущем рендере — освобождаем
+// перед следующим рендером, чтобы не копить память при частом обновлении списка.
+let vehicleListBlobURLs = [];
+
+function revokeVehicleListBlobURLs() {
+  vehicleListBlobURLs.forEach(url => URL.revokeObjectURL(url));
+  vehicleListBlobURLs = [];
+}
+
 async function renderVehicles() {
   const list = document.getElementById('vehicle-list');
   const count = document.getElementById('fleet-count');
@@ -36,9 +47,19 @@ async function renderVehicles() {
 
   count.textContent = `${cars.length} ${pluralVehicles(cars.length)} в парке`;
 
+  const photos = await Promise.all(
+    cars.map(car => (car.mainPhotoId ? getPhoto(car.mainPhotoId) : null))
+  );
+
+  revokeVehicleListBlobURLs();
+
   list.innerHTML = cars.length
-    ? cars.map(vehicleCardHTML).join('')
+    ? cars.map((car, i) => vehicleCardHTML(car, photos[i] || null)).join('')
     : `<div class="empty">Кажется, вы ещё не добавили автомобиль.<br>Нажмите «Добавить автомобиль», чтобы завести первую карточку.</div>`;
+
+  vehicleListBlobURLs = Array.from(list.querySelectorAll('.vehicle-photo-img'))
+    .map(img => img.src)
+    .filter(src => src.startsWith('blob:'));
 
   list.querySelectorAll('.vehicle-card').forEach(card => {
     const open = () => { window.location.href = `car.html?id=${card.dataset.id}`; };
@@ -95,13 +116,21 @@ async function openRemindersModal() {
   document.getElementById('reminders-overlay').hidden = false;
 }
 
-/** Автопоказ при открытии приложения — если срочных напоминаний нет, окно не появляется. */
+/** Автопоказ при открытии приложения — если срочных напоминаний нет, окно не появляется.
+ *  Само окно показывается автоматически не чаще одного раза в день: бейдж на колокольчике
+ *  при этом всегда отражает актуальное наличие срочных напоминаний. */
 async function checkUpcomingRemindersOnLoad() {
   const { relevant, carsById } = await getUrgentReminders();
   document.getElementById('reminders-badge').hidden = relevant.length === 0;
   if (!relevant.length) return;
+
+  const today = todayStamp();
+  const lastShown = await getSetting('lastReminderAutoShow');
+  if (lastShown === today) return;
+
   renderRemindersModal(relevant, carsById);
   document.getElementById('reminders-overlay').hidden = false;
+  await setSetting('lastReminderAutoShow', today);
 }
 
 document.getElementById('reminders-btn').addEventListener('click', openRemindersModal);
@@ -200,7 +229,7 @@ document.getElementById('import-data-input').addEventListener('change', async (e
     const text = await file.text();
     const payload = JSON.parse(text);
     const result = await importAllData(payload);
-    alert(`Восстановлено: ${result.cars} авто, ${result.expenses} расходов, ${result.reminders} напоминаний, ${result.photos} фото`);
+    alert(`Восстановлено: ${result.cars} авто, ${result.expenses} расходов, ${result.reminders} напоминаний, ${result.photos} фото, ${result.categories} категорий`);
     menuOverlay.hidden = true;
     await renderVehicles();
   } catch (err) {

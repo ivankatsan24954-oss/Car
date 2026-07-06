@@ -57,6 +57,16 @@ const REMINDER_ICONS = {
 
 const STATUS_LABEL = { ok: 'На ходу', repair: 'Ремонт', sold: 'Продан' };
 
+// Статус самой записи о ремонте (не путать со статусом автомобиля выше)
+const REPAIR_STATUS_LABEL = { in_progress: 'В процессе', done: 'Завершён' };
+
+/** Иконка для категории расхода — сперва встроенные, затем пользовательские. */
+function expenseIcon(category, customCategories = []) {
+  if (EXPENSE_ICONS[category]) return EXPENSE_ICONS[category];
+  const custom = customCategories.find(c => c.name === category);
+  return (custom && custom.icon) || '🏷️';
+}
+
 /** Экранирует пользовательский текст перед вставкой в innerHTML. */
 function escapeHTML(str) {
   return String(str ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
@@ -102,6 +112,25 @@ function reminderStatus(iso) {
   return daysUntil(iso) < 0
     ? { key: 'overdue', label: 'Просрочено' }
     : { key: 'active', label: 'Активно' };
+}
+
+/** Возвращает src для <img> из записи фото (base64-строка или Blob). */
+function photoSrc(photo) {
+  return typeof photo.data === 'string' ? photo.data : URL.createObjectURL(photo.data);
+}
+
+/** Рендерит бейдж гос. номера в стиле настоящего знака (или пустую заглушку). */
+function plateBadgeHTML(plate) {
+  const clean = (plate || '').trim();
+  if (!clean) {
+    return `<span class="plate-badge is-empty"><span class="plate-badge-text">—</span></span>`;
+  }
+  return `
+    <span class="plate-badge">
+      <span class="plate-badge-text">${escapeHTML(clean)}</span>
+      <span class="plate-badge-region">RUS</span>
+    </span>
+  `;
 }
 
 function generateCarPhotoDataURL(type) {

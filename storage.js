@@ -134,6 +134,18 @@ async function addExpense(data) {
     note: (data.note || '').trim(),
     createdAt: nowISO()
   };
+
+  // Расширенные поля ремонта — заполняются сразу (если переданы) либо донаполняются
+  // позже через updateExpense. Хранятся только у записей категории «Ремонт».
+  if (expense.category === 'Ремонт') {
+    expense.repairShop = (data.repairShop || '').trim();
+    expense.repairWork = (data.repairWork || '').trim();
+    expense.repairMileage = (data.repairMileage !== undefined && data.repairMileage !== null && data.repairMileage !== '')
+      ? Number(data.repairMileage) : null;
+    expense.repairPhotoId = data.repairPhotoId || null;
+    expense.repairStatus = data.repairStatus || 'done'; // 'in_progress' | 'done'
+  }
+
   await DB.put(DB.STORES.expenses, expense);
   return expense;
 }
@@ -290,6 +302,65 @@ async function deletePhotosByCar(carId) {
 }
 
 // =========================================================
+//                 ПОЛЬЗОВАТЕЛЬСКИЕ КАТЕГОРИИ РАСХОДОВ
+// =========================================================
+
+// Базовые категории всегда доступны и не хранятся в БД — пользователь может
+// только добавлять к ним свои, не переопределяя и не удаляя базовые.
+const BUILTIN_EXPENSE_CATEGORIES = ['Топливо', 'Ремонт', 'Обслуживание', 'Страховка', 'Штрафы', 'Прочее'];
+
+/**
+ * Добавляет пользовательскую категорию расходов.
+ * @param {string} name
+ * @param {string} [icon] эмодзи-иконка; если не указана — используется значок по умолчанию
+ */
+async function addCategory(name, icon) {
+  const clean = (name || '').trim();
+  if (!clean) throw new Error('Укажите название категории');
+  if (BUILTIN_EXPENSE_CATEGORIES.some(c => c.toLowerCase() === clean.toLowerCase())) {
+    throw new Error('Такая категория уже есть среди стандартных');
+  }
+  const existing = await getCategories();
+  const dup = existing.find(c => c.name.toLowerCase() === clean.toLowerCase());
+  if (dup) return dup;
+
+  const category = {
+    id: generateId(),
+    name: clean,
+    icon: (icon || '').trim() || '🏷️',
+    createdAt: nowISO()
+  };
+  await DB.put(DB.STORES.categories, category);
+  return category;
+}
+
+/** Возвращает пользовательские категории расходов (без стандартных). */
+async function getCategories() {
+  const list = await DB.getAll(DB.STORES.categories);
+  return list.sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
+}
+
+async function deleteCategory(id) {
+  return DB.delete(DB.STORES.categories, id);
+}
+
+// =========================================================
+//                    НАСТРОЙКИ ПРИЛОЖЕНИЯ
+// =========================================================
+
+/** Возвращает значение настройки по ключу (или undefined, если не задано). */
+async function getSetting(key) {
+  const row = await DB.get(DB.STORES.settings, key);
+  return row ? row.value : undefined;
+}
+
+/** Сохраняет значение настройки по ключу. */
+async function setSetting(key, value) {
+  await DB.put(DB.STORES.settings, { key, value });
+  return value;
+}
+
+// =========================================================
 //                    ЭКСПОРТ / ИМПОРТ (бэкап)
 // =========================================================
 
@@ -298,11 +369,12 @@ async function deletePhotosByCar(carId) {
  * перед переустановкой приложения или сменой телефона.
  */
 async function exportAllData() {
-  const [cars, expenses, reminders, photos] = await Promise.all([
+  const [cars, expenses, reminders, photos, categories] = await Promise.all([
     DB.getAll(DB.STORES.cars),
     DB.getAll(DB.STORES.expenses),
     DB.getAll(DB.STORES.reminders),
-    DB.getAll(DB.STORES.photos)
+    DB.getAll(DB.STORES.photos),
+    DB.getAll(DB.STORES.categories)
   ]);
 
   // Blob нельзя сериализовать в JSON — конвертируем фото в base64.
@@ -313,8 +385,8 @@ async function exportAllData() {
 
   return {
     exportedAt: nowISO(),
-    version: DB.STORES ? 1 : 1,
-    cars, expenses, reminders,
+    version: 2,
+    cars, expenses, reminders, categories,
     photos: safePhotos
   };
 }
@@ -325,14 +397,18 @@ async function exportAllData() {
  */
 async function importAllData(payload) {
   if (!payload || typeof payload !== 'object') throw new Error('Некорректный файл резервной копии');
-  const { cars = [], expenses = [], reminders = [], photos = [] } = payload;
+  const { cars = [], expenses = [], reminders = [], photos = [], categories = [] } = payload;
 
   for (const car of cars) await DB.put(DB.STORES.cars, car);
   for (const expense of expenses) await DB.put(DB.STORES.expenses, expense);
   for (const reminder of reminders) await DB.put(DB.STORES.reminders, reminder);
   for (const photo of photos) await DB.put(DB.STORES.photos, photo);
+  for (const category of categories) await DB.put(DB.STORES.categories, category);
 
-  return { cars: cars.length, expenses: expenses.length, reminders: reminders.length, photos: photos.length };
+  return {
+    cars: cars.length, expenses: expenses.length, reminders: reminders.length,
+    photos: photos.length, categories: categories.length
+  };
 }
 
 // ---------- Экспорт в глобальную область ----------
@@ -367,6 +443,14 @@ window.base64ToBlob = base64ToBlob;
 window.exportAllData = exportAllData;
 window.importAllData = importAllData;
 
+window.BUILTIN_EXPENSE_CATEGORIES = BUILTIN_EXPENSE_CATEGORIES;
+window.addCategory = addCategory;
+window.getCategories = getCategories;
+window.deleteCategory = deleteCategory;
+
+window.getSetting = getSetting;
+window.setSetting = setSetting;
+
 // Также группируем всё в один объект — удобно для импорта одним именем
 window.Storage = {
   addCar, getCars, getCar, updateCar, deleteCar,
@@ -374,5 +458,7 @@ window.Storage = {
   addReminder, getReminders, getReminder, updateReminder, deleteReminder,
   addPhoto, getPhotos, getPhoto, deletePhoto, deletePhotosByCar,
   blobToBase64, base64ToBlob,
-  exportAllData, importAllData
+  exportAllData, importAllData,
+  addCategory, getCategories, deleteCategory,
+  getSetting, setSetting
 };
